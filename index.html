@@ -40,19 +40,16 @@
         </div>
         <div class="row p-3 m-3">
             <div class="col"><button class="btn btn-success" onclick="startTrackBus()">Track</button></div>
+            <div class="col" id="statusshow">😐</div>
         </div>
         <div class="row p-3 m-3">
             <div class="col" id="alertsign">
 
                 <div class="alert alert-primary" role="alert">
-                    Aguardando SEMOB!
+                    Aguardando
                 </div>
 
             </div>
-        </div>
-        <div class="row">
-            <div class="col">For debug purposes:</div>
-            <div class="col" id="debug"></div>
         </div>
     </div>
 
@@ -62,32 +59,53 @@
 
     <script>
         function startTrackBus() {
+            const alertsign = document.getElementById('alertsign');
+            const statusshow = document.getElementById('statusshow');
             const linha = document.getElementById('linha').value;
-            const sentido = document.querySelector('input[name="sentido"]:checked');
-            const debug = document.getElementById('debug');
+            const sentidoRadio = document.querySelector('input[name="sentido"]:checked').id;
+            const sentido = sentidoRadio === "ida" ? "IDA" : "VOLTA";
+
+            statusshow.innerHTML = '⏳';
 
             const url = 'https://www.sistemas.dftrans.df.gov.br/service/gps/operacoes';
 
             fetch(url)
                 .then(res => res.json())
                 .then(data => {
-                    debug.innerHTML += `Conteúdo de data: ${data}`;
+                    let contagem = 0;
+                    let horarios = [];
+
                     data.forEach(empresa => {
-                        debug.innerHTML += `conteúdo de element: ${empresa}`;
-                        element.veiculos.forEach(veiculo => {
-                            debug.innerHTML += `Conteúdo de veiculo: ${veiculo}`;
+                        empresa.veiculos.forEach(veiculo => {
                             if (veiculo.linha === linha && veiculo.sentido === sentido) {
-                                document.getElementById('alertsign').innerHTML = `<div class="alert alert-success" role="alert">Ônibus está rodando!</div>`;
-                            } else {
-                                document.getElementById('alertsign').innerHTML = `<div class="alert alert-primary" role="alert">Ônibus não está rodando!</div>`;
+                                contagem++;
+                                horarios.push(new Date(veiculo.horario).toLocaleTimeString());
                             }
-                        })
+                        });
                     });
+
+                    if (contagem === 0) {
+                        alertsign.innerHTML = '<div class="alert alert-secondary" role="alert">Ônibus não saiu ou não encontrado!</div>';
+                    } else {
+                        alertsign.innerHTML = `
+                    <div class="alert alert-success" role="alert">
+                        ${contagem} ônibus encontrados<br>
+                        Linha: ${linha}<br>
+                        Sentido: ${sentido}<br>
+                        Horário(s): ${horarios.join(', ')}
+                    </div>`;
+                    }
+
+                    statusshow.innerHTML = '✅';
                 })
                 .catch(err => {
-                    document.getElementById('alertsign').innerHTML = `<div class="alert alert-danger" role="alert">Algo deu errado ${err}</div>`;
-                })
-
+                    console.error("Erro ao buscar dados:", err);
+                    alertsign.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    Algo deu errado: ${err.message}
+                </div>`;
+                    statusshow.innerHTML = '❌';
+                });
         }
     </script>
 </body>
