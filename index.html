@@ -58,12 +58,41 @@
         crossorigin="anonymous"></script>
 
     <script>
+        // Função para mostrar a notificação no desktop
+        function showNotification(title, body) {
+            // Verifica se o navegador suporta notificações
+            if (!("Notification" in window)) {
+                console.log("Este navegador não suporta notificações de desktop.");
+                return;
+            }
+
+            // Verifica se a permissão já foi concedida
+            if (Notification.permission === "granted") {
+                new Notification(title, { body: body });
+            }
+            // Se a permissão ainda não foi solicitada, pede ao usuário
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(title, { body: body });
+                    }
+                });
+            }
+            // Se a permissão foi negada, não fazemos nada.
+        }
+
         function startTrackBus() {
             const alertsign = document.getElementById('alertsign');
             const statusshow = document.getElementById('statusshow');
             const linha = document.getElementById('linha').value;
             const sentidoRadio = document.querySelector('input[name="sentido"]:checked').id;
             const sentido = sentidoRadio === "ida" ? "IDA" : "VOLTA";
+
+            // Primeiro, vamos solicitar a permissão de notificação, caso ainda não tenha sido dada
+            // Isso é feito aqui para que o navegador associe a solicitação a uma ação do usuário (o clique)
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                 Notification.requestPermission();
+            }
 
             statusshow.innerHTML = '⏳';
 
@@ -79,21 +108,25 @@
                         empresa.veiculos.forEach(veiculo => {
                             if (veiculo.linha === linha && veiculo.sentido === sentido) {
                                 contagem++;
-                                horarios.push(new Date(veiculo.horario).toLocaleTimeString());
+                                horarios.push(new Date(veiculo.horario).toLocaleTimeString('pt-BR'));
                             }
                         });
                     });
 
                     if (contagem === 0) {
                         alertsign.innerHTML = '<div class="alert alert-secondary" role="alert">Ônibus não saiu ou não encontrado!</div>';
+                        showNotification('Nenhum ônibus encontrado', `Nenhum veículo encontrado para a linha ${linha}.`);
                     } else {
+                        const horariosStr = horarios.join(', ');
                         alertsign.innerHTML = `
                     <div class="alert alert-success" role="alert">
                         ${contagem} ônibus encontrados<br>
                         Linha: ${linha}<br>
                         Sentido: ${sentido}<br>
-                        Horário(s): ${horarios.join(', ')}
+                        Horário(s): ${horariosStr}
                     </div>`;
+                        // Envia a notificação para o usuário
+                        showNotification(`${contagem} ônibus encontrados!`, `Linha ${linha} (${sentido}): ${horariosStr}`);
                     }
 
                     statusshow.innerHTML = '✅';
@@ -105,6 +138,7 @@
                     Algo deu errado: ${err.message}
                 </div>`;
                     statusshow.innerHTML = '❌';
+                    showNotification('Erro na Busca', `Não foi possível consultar os dados.`);
                 });
         }
     </script>
